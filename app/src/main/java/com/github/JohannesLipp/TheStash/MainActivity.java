@@ -1,77 +1,66 @@
 package com.github.JohannesLipp.TheStash;
 
 import android.os.Bundle;
-
-import com.google.android.material.snackbar.Snackbar;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.room.Room;
 
-import android.view.View;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
-
-import com.github.JohannesLipp.TheStash.databinding.ActivityMainBinding;
-
-import android.view.Menu;
-import android.view.MenuItem;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private AppBarConfiguration appBarConfiguration;
-    private ActivityMainBinding binding;
+    private FoodAdapter adapter;
+    private AppDatabase db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        RecyclerView recyclerView = findViewById(R.id.recyclerView);
+        FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
 
-        setSupportActionBar(binding.toolbar);
+        db = Room.databaseBuilder(getApplicationContext(),
+                        AppDatabase.class, "food_database")
+                .allowMainThreadQueries()
+                .build();
 
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        binding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAnchorView(R.id.fab)
-                        .setAction("Action", null).show();
-            }
+        adapter = new FoodAdapter(this::showDeleteDialog);
+        recyclerView.setAdapter(adapter);
+
+        loadItems();
+
+        fabAdd.setOnClickListener(v -> openAddDialog());
+    }
+
+    private void loadItems() {
+        List<FoodItem> items = db.foodItemDao().getAllItemsSorted();
+        adapter.setItems(items);
+    }
+
+    private void openAddDialog() {
+        AddItemDialog dialog = new AddItemDialog(this, (barcode, month, year, quantity) -> {
+            FoodItem newItem = new FoodItem(barcode, month, year, quantity);
+            db.foodItemDao().insert(newItem);
+            loadItems();
+            Toast.makeText(MainActivity.this, "Entry saved", Toast.LENGTH_SHORT).show();
         });
+        dialog.show();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
-                || super.onSupportNavigateUp();
+    private void showDeleteDialog(FoodItem item) {
+        DeleteItemDialog dialog = new DeleteItemDialog(this, item, quantityToRemove -> {
+            db.foodItemDao().reduceQuantity(item.getId(), quantityToRemove);
+            loadItems();
+            Toast.makeText(MainActivity.this, "Count reduced", Toast.LENGTH_SHORT).show();
+        });
+        dialog.show();
     }
 }
