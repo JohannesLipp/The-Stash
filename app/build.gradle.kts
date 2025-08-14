@@ -43,8 +43,15 @@ dependencies {
     implementation(libs.navigation.ui)
     implementation(libs.room.common.jvm)
     implementation(libs.room.runtime)
+    implementation(libs.camera.core)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     annotationProcessor(libs.room.compiler)
+
+    implementation(libs.barcode.scanning)
+
+    implementation(libs.camera.camera2)
 }

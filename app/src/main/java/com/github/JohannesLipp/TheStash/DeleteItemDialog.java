@@ -12,12 +12,10 @@ public class DeleteItemDialog extends Dialog {
         void onDelete(int quantityToRemove);
     }
 
-    private FoodItem item;
-    private DialogListener listener;
+    private final DialogListener listener;
 
-    public DeleteItemDialog(Context context, FoodItem item, DialogListener listener) {
+    public DeleteItemDialog(Context context, DialogListener listener) {
         super(context);
-        this.item = item;
         this.listener = listener;
     }
 
@@ -30,7 +28,7 @@ public class DeleteItemDialog extends Dialog {
         Button btnDelete = findViewById(R.id.btnDelete);
 
         btnDelete.setOnClickListener(v -> {
-            int quantityToRemove = Integer.parseInt(edtQuantity.getText().toString());
+            int quantityToRemove = Integer.parseInt(edtQuantity.getText().toString().trim());
             listener.onDelete(quantityToRemove);
             dismiss();
         });

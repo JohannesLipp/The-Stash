@@ -1,8 +1,11 @@
 package com.github.JohannesLipp.TheStash;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -17,6 +20,8 @@ public class MainActivity extends AppCompatActivity {
     private FoodAdapter adapter;
     private AppDatabase db;
 
+    private ActivityResultLauncher<Intent> barcodeLauncher;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -27,39 +32,64 @@ public class MainActivity extends AppCompatActivity {
 
         db = Room.databaseBuilder(getApplicationContext(),
                         AppDatabase.class, "food_database")
-                .allowMainThreadQueries()
+                .allowMainThreadQueries() // For demo purposes only. Use background threads in production!
                 .build();
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
         adapter = new FoodAdapter(this::showDeleteDialog);
         recyclerView.setAdapter(adapter);
 
         loadItems();
 
-        fabAdd.setOnClickListener(v -> openAddDialog());
+        barcodeLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        String scannedBarcode = result.getData().getStringExtra("barcode");
+                        openAddDialog(scannedBarcode);
+                    }
+                }
+        );
+
+        fabAdd.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, BarcodeScannerActivity.class);
+            barcodeLauncher.launch(intent);
+        });
     }
 
+    /**
+     * Loads all food items from the database and updates the RecyclerView.
+     */
     private void loadItems() {
         List<FoodItem> items = db.foodItemDao().getAllItemsSorted();
         adapter.setItems(items);
     }
 
-    private void openAddDialog() {
-        AddItemDialog dialog = new AddItemDialog(this, (barcode, month, year, quantity) -> {
+    /**
+     * Opens the dialog to add a new item with an optional scanned barcode.
+     *
+     * @param scannedBarcode the barcode string from the scanner (or null if not scanned)
+     */
+    private void openAddDialog(String scannedBarcode) {
+        AddItemDialog dialog = new AddItemDialog(this, scannedBarcode, (barcode, month, year, quantity) -> {
             FoodItem newItem = new FoodItem(barcode, month, year, quantity);
             db.foodItemDao().insert(newItem);
             loadItems();
-            Toast.makeText(MainActivity.this, "Entry saved", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "Item saved successfully", Toast.LENGTH_SHORT).show();
         });
         dialog.show();
     }
 
+    /**
+     * Opens the dialog to delete or reduce quantity of an existing item.
+     *
+     * @param item the FoodItem to modify
+     */
     private void showDeleteDialog(FoodItem item) {
-        DeleteItemDialog dialog = new DeleteItemDialog(this, item, quantityToRemove -> {
+        DeleteItemDialog dialog = new DeleteItemDialog(this, quantityToRemove -> {
             db.foodItemDao().reduceQuantity(item.getId(), quantityToRemove);
             loadItems();
-            Toast.makeText(MainActivity.this, "Count reduced", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "Quantity updated", Toast.LENGTH_SHORT).show();
         });
         dialog.show();
     }

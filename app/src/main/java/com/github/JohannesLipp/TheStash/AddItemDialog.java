@@ -13,9 +13,11 @@ public class AddItemDialog extends Dialog {
     }
 
     private final DialogListener listener;
+    private final String scannedBarcode;
 
-    public AddItemDialog(Context context, DialogListener listener) {
+    public AddItemDialog(Context context, String scannedBarcode, DialogListener listener) {
         super(context);
+        this.scannedBarcode = scannedBarcode;
         this.listener = listener;
     }
 
@@ -30,11 +32,16 @@ public class AddItemDialog extends Dialog {
         EditText edtQuantity = findViewById(R.id.edtQuantity);
         Button btnSave = findViewById(R.id.btnSave);
 
+        // Prefill barcode from scanner, if present
+        if (scannedBarcode != null && !scannedBarcode.isEmpty()) {
+            edtBarcode.setText(scannedBarcode);
+        }
+
         btnSave.setOnClickListener(v -> {
-            String barcode = edtBarcode.getText().toString();
-            int month = Integer.parseInt(edtMonth.getText().toString());
-            int year = Integer.parseInt(edtYear.getText().toString());
-            int quantity = Integer.parseInt(edtQuantity.getText().toString());
+            String barcode = edtBarcode.getText().toString().trim();
+            int month = Integer.parseInt(edtMonth.getText().toString().trim());
+            int year = Integer.parseInt(edtYear.getText().toString().trim());
+            int quantity = Integer.parseInt(edtQuantity.getText().toString().trim());
 
             listener.onSave(barcode, month, year, quantity);
             dismiss();
