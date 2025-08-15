@@ -47,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         String scannedBarcode = result.getData().getStringExtra("barcode");
                         openAddDialog(scannedBarcode);
+                    } else {
+                        openAddDialog(null);
                     }
                 }
         );
