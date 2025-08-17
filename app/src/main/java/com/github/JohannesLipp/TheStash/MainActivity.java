@@ -84,14 +84,29 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Opens the dialog to delete or reduce quantity of an existing item.
+     * If quantity reaches zero, the item is removed.
      *
      * @param item the FoodItem to modify
      */
     private void showDeleteDialog(FoodItem item) {
         DeleteItemDialog dialog = new DeleteItemDialog(this, quantityToRemove -> {
-            db.foodItemDao().reduceQuantity(item.getId(), quantityToRemove);
+            if (quantityToRemove <= 0) { // Safety check or specific handling if needed
+                Toast.makeText(MainActivity.this, "Please enter a valid quantity to remove.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int currentQuantity = item.getQuantity();
+            String itemDescription = item.getBarcode(); // Or another descriptive field
+
+            if (quantityToRemove >= currentQuantity) {
+                // Remove the item entirely
+                db.foodItemDao().delete(item);
+                Toast.makeText(MainActivity.this, "Item '" + itemDescription + "' removed.", Toast.LENGTH_SHORT).show();
+            } else {
+                db.foodItemDao().reduceQuantity(item.getId(), quantityToRemove);
+                Toast.makeText(MainActivity.this, "Quantity for '" + itemDescription + "' updated", Toast.LENGTH_SHORT).show();
+            }
             loadItems();
-            Toast.makeText(MainActivity.this, "Quantity updated", Toast.LENGTH_SHORT).show();
         });
         dialog.show();
     }
