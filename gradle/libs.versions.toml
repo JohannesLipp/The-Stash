@@ -10,6 +10,7 @@ espressoCore = "3.5.1"
 appcompat = "1.6.1"
 material = "1.10.0"
 constraintlayout = "2.1.4"
+monthandyearpickerVersion = "1.3.0"
 navigationFragment = "2.6.0"
 navigationUi = "2.6.0"
 roomCommonJvm = "2.7.2"
@@ -39,6 +40,7 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraCore" }
 camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraLifecycle" }
 camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraView" }
+whiteelephant-monthandyearpicker = { module = "com.whiteelephant:monthandyearpicker", version.ref = "monthandyearpickerVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
