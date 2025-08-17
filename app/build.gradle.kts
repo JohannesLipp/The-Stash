@@ -35,8 +35,6 @@ android {
 }
 
 dependencies {
-    implementation("com.github.dewinjm:monthyear-picker:1.0.2")
-
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.constraintlayout)

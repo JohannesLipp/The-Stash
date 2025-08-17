@@ -8,12 +8,14 @@ public class FoodItem {
     @PrimaryKey(autoGenerate = true)
     private int id;
     private final String barcode;
+    private final int expiryDay;
     private final int expiryMonth;
     private final int expiryYear;
     private int quantity;
 
-    public FoodItem(String barcode, int expiryMonth, int expiryYear, int quantity) {
+    public FoodItem(String barcode, int expiryDay, int expiryMonth, int expiryYear, int quantity) {
         this.barcode = barcode;
+        this.expiryDay = expiryDay;
         this.expiryMonth = expiryMonth;
         this.expiryYear = expiryYear;
         this.quantity = quantity;
@@ -31,6 +33,8 @@ public class FoodItem {
         return barcode;
     }
 
+    public int getExpiryDay(){
+        return expiryDay;}
     public int getExpiryMonth() {
         return expiryMonth;
     }

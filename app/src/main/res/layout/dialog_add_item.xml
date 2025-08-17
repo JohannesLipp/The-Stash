@@ -17,17 +17,17 @@
         android:orientation="horizontal">
         <EditText
             android:id="@+id/edtExpires"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Expires (MM/YYYY)"
+            android:hint="Expires (DD.MM.YYYY)"
             android:inputType="text"
             android:layout_weight="1"
             />
 
         <Button
             android:id="@+id/btnSelectDate"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Select date"
             android:layout_weight="2" />

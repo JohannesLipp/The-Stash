@@ -73,8 +73,8 @@ public class MainActivity extends AppCompatActivity {
      * @param scannedBarcode the barcode string from the scanner (or null if not scanned)
      */
     private void openAddDialog(String scannedBarcode) {
-        AddItemDialog dialog = new AddItemDialog(this, scannedBarcode, (barcode, month, year, quantity) -> {
-            FoodItem newItem = new FoodItem(barcode, month, year, quantity);
+        AddItemDialog dialog = new AddItemDialog(this, scannedBarcode, (barcode, day, month, year, quantity) -> {
+            FoodItem newItem = new FoodItem(barcode, day, month, year, quantity);
             db.foodItemDao().insert(newItem);
             loadItems();
             Toast.makeText(MainActivity.this, "Item saved successfully", Toast.LENGTH_SHORT).show();
