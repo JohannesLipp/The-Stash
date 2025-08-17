@@ -2,6 +2,10 @@ package com.github.JohannesLipp.TheStash;
 
 import android.util.Log;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -25,7 +29,7 @@ public class OpenFoodFacts {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public interface ProductDataCallback {
-        void onSuccess(String productName, String brands, String quantity, String imageUrl); // Add more fields as needed
+        void onSuccess(OpenFoodFactsResultDTO results);
         void onError(String errorMessage);
     }
 
@@ -43,7 +47,6 @@ public class OpenFoodFacts {
 
         executorService.execute(() -> {
             HttpURLConnection urlConnection = null;
-            BufferedReader reader = null;
             String productJsonString;
 
             try {
@@ -114,7 +117,9 @@ public class OpenFoodFacts {
         return buffer.toString();
     }
 
-    private void parseProductJson(String jsonString, ProductDataCallback callback) throws JSONException {
+    private void parseProductJson(String jsonString, ProductDataCallback callback) throws JSONException, JsonProcessingException {
+        Log.d(TAG, "JSON Response:" + jsonString);
+
         JSONObject productJson = new JSONObject(jsonString);
 
         // According to Open Food Facts API:
@@ -123,19 +128,25 @@ public class OpenFoodFacts {
         String statusVerbose = productJson.optString("status_verbose", "unknown status");
 
         if (status == 1 && productJson.has("product")) {
-            JSONObject product = productJson.getJSONObject("product");
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.readTree(jsonString).path("product").traverse().readValueAs(OpenFoodFactsResultDTO.class);
+            OpenFoodFactsResultDTO product = objectMapper.readValue(jsonString, OpenFoodFactsResultDTO.class);
 
-            // Extract desired fields (these are common fields, verify against actual JSON structure)
-            String productName = product.optString("product_name", "N/A");
-            if (productName.isEmpty()) productName = product.optString("name", "N/A"); // Fallback
-
-            String brands = product.optString("brands", "N/A");
-            String quantity = product.optString("quantity", "N/A");
-            String imageUrl = product.optString("image_url", null);
+            Log.i(TAG, "Extracted product info:" + product);
+//            JSONObject product = productJson.getJSONObject("product");
+//            Log.d(TAG, "Product JSON: " + product);
+//
+//            // Extract desired fields (these are common fields, verify against actual JSON structure)
+//            String productName = product.optString("product_name", "N/A");
+//            if (productName.isEmpty()) productName = product.optString("name", "N/A"); // Fallback
+//
+//            String brands = product.optString("brands", "N/A");
+//            String quantity = product.optString("quantity", "N/A");
+//            String imageUrl = product.optString("image_url", null);
             // You can add more fields like ingredients_text, nutriments, categories etc.
 
-            Log.i(TAG, "Product Name: " + productName + ", Brands: " + brands + ", Quantity: " + quantity);
-            callback.onSuccess(productName, brands, quantity, imageUrl);
+//            Log.i(TAG, "Product Name: " + productName + ", Brands: " + brands + ", Quantity: " + quantity);
+            callback.onSuccess(product);
         } else {
             Log.w(TAG, "Product not found or status indicates error. Status verbose: " + statusVerbose);
             callback.onError("Product not found: " + statusVerbose);

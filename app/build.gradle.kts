@@ -53,4 +53,6 @@ dependencies {
     implementation(libs.barcode.scanning)
 
     implementation(libs.camera.camera2)
+
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.2")
 }

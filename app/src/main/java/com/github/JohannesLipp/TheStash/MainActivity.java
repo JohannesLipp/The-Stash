@@ -2,6 +2,7 @@ package com.github.JohannesLipp.TheStash;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -36,7 +37,8 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new FoodAdapter(this::showDeleteDialog);
+        //adapter = new FoodAdapter(this::showDeleteDialog);
+        adapter = new FoodAdapter(this::downloadFoodData);
         recyclerView.setAdapter(adapter);
 
         loadItems();
@@ -109,5 +111,25 @@ public class MainActivity extends AppCompatActivity {
             loadItems();
         });
         dialog.show();
+    }
+
+    private class ProductDataCallback implements OpenFoodFacts.ProductDataCallback {
+
+        @Override
+        public void onSuccess(OpenFoodFactsResultDTO product) {
+            Log.i("MainActivity", "Download successful: " + product);
+            // Toast.makeText(MainActivity.this, "Download successful. Product name: " + productName + ",", Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onError(String errorMessage) {
+            Log.e("MainActivity", "Download failed. Error: " + errorMessage);
+            //Toast.makeText(MainActivity.this, "Download failed. Error: " + errorMessage, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void downloadFoodData(FoodItem item) {
+        OpenFoodFacts openFoodFacts = new OpenFoodFacts();
+        openFoodFacts.fetchProductData(item.getBarcode(), new ProductDataCallback());
     }
 }
