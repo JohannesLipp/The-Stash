@@ -1,8 +1,10 @@
 package com.github.JohannesLipp.TheStash;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OpenFoodFactsResultDTO {
     @JsonProperty("product_name")
     private final String productName;
@@ -48,5 +50,16 @@ public class OpenFoodFactsResultDTO {
 
     public String getImageUrl() {
         return imageUrl;
+    }
+
+    @Override
+    public String toString() {
+        return "OpenFoodFactsResultDTO{" +
+                "productName='" + productName + '\'' +
+                ", productNameDE='" + productNameDE + '\'' +
+                ", productQuantity='" + productQuantity + '\'' +
+                ", brands='" + brands + '\'' +
+                ", imageUrl='" + imageUrl + '\'' +
+                '}';
     }
 }

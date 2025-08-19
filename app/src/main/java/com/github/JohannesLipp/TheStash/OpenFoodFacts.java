@@ -3,11 +3,10 @@ package com.github.JohannesLipp.TheStash;
 import android.util.Log;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -30,13 +29,14 @@ public class OpenFoodFacts {
 
     public interface ProductDataCallback {
         void onSuccess(OpenFoodFactsResultDTO results);
+
         void onError(String errorMessage);
     }
 
     /**
      * Fetches product data from the Open Food Facts staging API for a given barcode.
      *
-     * @param barcode The barcode of the product to fetch.
+     * @param barcode  The barcode of the product to fetch.
      * @param callback The callback to handle the success or error response.
      */
     public void fetchProductData(String barcode, ProductDataCallback callback) {
@@ -117,39 +117,37 @@ public class OpenFoodFacts {
         return buffer.toString();
     }
 
-    private void parseProductJson(String jsonString, ProductDataCallback callback) throws JSONException, JsonProcessingException {
-        Log.d(TAG, "JSON Response:" + jsonString);
-
-        JSONObject productJson = new JSONObject(jsonString);
-
-        // According to Open Food Facts API:
-        // status: 1 if product found, 0 if not found
-        int status = productJson.optInt("status", 0);
-        String statusVerbose = productJson.optString("status_verbose", "unknown status");
-
-        if (status == 1 && productJson.has("product")) {
+    private void parseProductJson(String jsonString, ProductDataCallback callback) throws JSONException { // Can remove JSONException if not using org.json
+        try {
             ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.readTree(jsonString).path("product").traverse().readValueAs(OpenFoodFactsResultDTO.class);
-            OpenFoodFactsResultDTO product = objectMapper.readValue(jsonString, OpenFoodFactsResultDTO.class);
+            // Read the entire JSON string into a Jackson JsonNode
+            JsonNode rootNode = objectMapper.readTree(jsonString);
 
-            Log.i(TAG, "Extracted product info:" + product);
-//            JSONObject product = productJson.getJSONObject("product");
-//            Log.d(TAG, "Product JSON: " + product);
-//
-//            // Extract desired fields (these are common fields, verify against actual JSON structure)
-//            String productName = product.optString("product_name", "N/A");
-//            if (productName.isEmpty()) productName = product.optString("name", "N/A"); // Fallback
-//
-//            String brands = product.optString("brands", "N/A");
-//            String quantity = product.optString("quantity", "N/A");
-//            String imageUrl = product.optString("image_url", null);
-            // You can add more fields like ingredients_text, nutriments, categories etc.
+            // Check status (using Jackson's navigation)
+            int status = rootNode.path("status").asInt(0); // asInt(0) provides default if not found
+            String statusVerbose = rootNode.path("status_verbose").asText("unknown status");
 
-//            Log.i(TAG, "Product Name: " + productName + ", Brands: " + brands + ", Quantity: " + quantity);
-            callback.onSuccess(product);
-        } else {
-            Log.w(TAG, "Product not found or status indicates error. Status verbose: " + statusVerbose);
-            callback.onError("Product not found: " + statusVerbose);
+            if (status == 1) {
+                JsonNode productNode = rootNode.path("product"); // Get the "product" node
+                if (productNode.isMissingNode() || !productNode.isObject()) {
+                    Log.w(TAG, "Product node is missing or not an object. Status verbose: " + statusVerbose);
+                    callback.onError("Product data structure error: " + statusVerbose);
+                    return;
+                }
+
+                // Deserialize the "product" node directly into your DTO
+                OpenFoodFactsResultDTO productDTO = objectMapper.treeToValue(productNode, OpenFoodFactsResultDTO.class);
+
+                Log.i(TAG, "Successfully deserialized product: " + productDTO.toString());
+                callback.onSuccess(productDTO);
+
+            } else {
+                Log.w(TAG, "Product not found or status indicates error. Status verbose: " + statusVerbose);
+                callback.onError("Product not found: " + statusVerbose);
+            }
+        } catch (JsonProcessingException e) {
+            Log.e(TAG, "Jackson JSON processing error", e);
+            callback.onError("JSON parsing error: " + e.getMessage());
         }
     }
 
