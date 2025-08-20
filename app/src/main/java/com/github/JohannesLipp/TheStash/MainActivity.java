@@ -7,6 +7,7 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -34,12 +35,10 @@ public class MainActivity extends AppCompatActivity {
 
         db = Room.databaseBuilder(getApplicationContext(),
                         AppDatabase.class, "food_database")
-                .allowMainThreadQueries() // For demo purposes only. Use background threads in production!
                 .build();
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        //adapter = new FoodAdapter(this::showDeleteDialog);
-        adapter = new FoodAdapter(this::showDeleteDialog);
+        adapter = new FoodAdapter(this::showDeleteDialog, this::downloadFoodData);
         recyclerView.setAdapter(adapter);
 
         loadItems();
@@ -62,38 +61,32 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Loads all food items from the database and updates the RecyclerView.
-     */
     private void loadItems() {
-        // This should run on a background thread in production
-        List<FoodItem> items = db.foodItemDao().getAllItemsSorted();
-        adapter.setItems(items);
+        new Thread(() -> {
+            final List<FoodItem> items = db.foodItemDao().getAllItemsSorted();
+            // Post the update back to the main UI thread
+            runOnUiThread(() -> {
+                if (adapter != null) {
+                    adapter.setItems(items);
+                }
+            });
+        }).start();
     }
 
-    /**
-     * Opens the dialog to add a new item with an optional scanned barcode.
-     *
-     * @param scannedBarcode the barcode string from the scanner (or null if not scanned)
-     */
     private void openAddDialog(String scannedBarcode) {
         AddItemDialog dialog = new AddItemDialog(this, scannedBarcode, (barcode, day, month, year, quantity) -> {
-            FoodItem newItem = new FoodItem(barcode, day, month, year, quantity);
-            db.foodItemDao().insert(newItem);
-            loadItems();
-            Toast.makeText(MainActivity.this, "Item saved successfully", Toast.LENGTH_SHORT).show();
+            new Thread(() -> { // Perform DB operation on background thread
+                FoodItem newItem = new FoodItem(barcode, day, month, year, quantity);
+                db.foodItemDao().insert(newItem);
+                loadItems();
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Item saved successfully", Toast.LENGTH_SHORT).show());
 
-            downloadFoodData(newItem);
+                downloadFoodData(newItem);
+            }).start();
         });
         dialog.show();
     }
 
-    /**
-     * Opens the dialog to delete or reduce quantity of an existing item.
-     * If quantity reaches zero, the item is removed.
-     *
-     * @param item the FoodItem to modify
-     */
     private void showDeleteDialog(FoodItem item) {
         DeleteItemDialog dialog = new DeleteItemDialog(this, quantityToRemove -> {
             if (quantityToRemove <= 0) { // Safety check or specific handling if needed
@@ -120,32 +113,25 @@ public class MainActivity extends AppCompatActivity {
     private class ProductDataCallbackHandler implements OpenFoodFacts.ProductDataCallback {
 
         @Override
-        public void onSuccess(OpenFoodFactsResultDTO product) {
+        public void onSuccess(@NonNull FoodItem foodItem, OpenFoodFactsResultDTO product) {
             Log.i("MainActivity", "Download successful: " + product);
 
             // Update database entry (product_name_de, or product_name as fallback; brands, image_url), and update the recyclerview if necessary
-            FoodItem existingItem = db.foodItemDao().getItemById(product.getId());
 
-            if (existingItem != null) {
-                existingItem.setName(product.getProductName());
-                existingItem.setBrands(product.getBrands());
-                existingItem.setImageUrl(product.getImageUrl());
+            foodItem.setName(product.getProductName());
+            foodItem.setBrands(product.getBrands());
+            foodItem.setImageUrl(product.getImageUrl());
 
-                db.foodItemDao().update(existingItem); // Save the updated item to the database
-                Log.d(TAG, "Updated item in DB: " + existingItem);
+            new Thread(() -> {
+                db.foodItemDao().update(foodItem); // Save the updated item to the database
+                Log.d(TAG, "Updated item in DB: " + foodItem);
 
-                // Refresh the UI by reloading items from the database
-                loadItems(); // This will update the RecyclerView
+                loadItems(); // Update the RecyclerView by reloading items from the database
 
                 runOnUiThread(() -> {
-                    Toast.makeText(MainActivity.this, "Details updated for: " + existingItem.getName(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Details updated for: " + foodItem.getName(), Toast.LENGTH_SHORT).show();
                 });
-            } else {
-                Log.w(TAG, "Item with ID " + product.getId() + " not found in DB for update. This shouldn't happen if download was triggered for an existing item.");
-                runOnUiThread(() -> {
-                    Toast.makeText(MainActivity.this, "Could not update item details (not found).", Toast.LENGTH_SHORT).show();
-                });
-            }
+            }).start();
         }
 
         @Override
@@ -157,8 +143,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void downloadFoodData(FoodItem item) {
+    private boolean downloadFoodData(FoodItem foodItem) {
         OpenFoodFacts openFoodFacts = new OpenFoodFacts();
-        openFoodFacts.fetchProductData(item.getId(), item.getBarcode(), new ProductDataCallbackHandler());
+        openFoodFacts.fetchProductData(foodItem, new ProductDataCallbackHandler());
+        return true;
     }
 }

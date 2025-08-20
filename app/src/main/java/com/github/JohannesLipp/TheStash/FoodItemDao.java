@@ -24,9 +24,6 @@ public interface FoodItemDao {
     @Update
     void update(FoodItem foodItem);
 
-    @Query("SELECT * FROM food_items WHERE id = :id LIMIT 1")
-    FoodItem getItemById(int id);
-
     @Delete
     void delete(FoodItem item);
 }

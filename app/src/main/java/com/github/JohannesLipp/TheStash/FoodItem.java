@@ -18,7 +18,7 @@ public class FoodItem {
     private final int expiryDay;
     private final int expiryMonth;
     private final int expiryYear;
-    private int count;
+    private final int count;
 
     @Ignore
     public FoodItem(String barcode, int expiryDay, int expiryMonth, int expiryYear, int count) {
@@ -78,10 +78,6 @@ public class FoodItem {
 
     public void setId(int id) {
         this.id = id;
-    }
-
-    public void setCount(int count) {
-        this.count = count;
     }
 
     public void setName(String name) {

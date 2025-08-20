@@ -17,16 +17,22 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
         void onItemClick(FoodItem item);
     }
 
+    public interface OnItemLongClickListener {
+        boolean onItemLongClick(FoodItem item);
+    }
+
     private List<FoodItem> items = new ArrayList<>();
     private final OnItemClickListener listener;
+    private final OnItemLongClickListener longClickListener;
 
-    public FoodAdapter(OnItemClickListener listener) {
+    public FoodAdapter(OnItemClickListener listener, OnItemLongClickListener longClickListener) {
         this.listener = listener;
+        this.longClickListener = longClickListener;
     }
 
     public void setItems(List<FoodItem> items) {
         this.items = items;
-        notifyDataSetChanged();
+        notifyDataSetChanged(); // Consider using DiffUtil for better performance
     }
 
     @NonNull
@@ -40,7 +46,7 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
     @Override
     public void onBindViewHolder(@NonNull FoodViewHolder holder, int position) {
         FoodItem item = items.get(position);
-        holder.bind(item, listener);
+        holder.bind(item, listener, longClickListener);
     }
 
     @Override
@@ -60,14 +66,25 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
             txtCount = itemView.findViewById(R.id.txtCount);
         }
 
-        public void bind(FoodItem item, OnItemClickListener listener) {
+        public void bind(final FoodItem item, final OnItemClickListener listener, final OnItemLongClickListener longClickListener) {
             txtName.setText("Name:" +item.getName());
             txtBrand.setText("Brand:" +item.getBrands());
             txtBarcode.setText("Barcode:" +item.getBarcode());
             txtExpiry.setText("Expiry:" +item.getExpiryFormatted());
             txtCount.setText("Count:" + item.getCount());
 
-            itemView.setOnClickListener(v -> listener.onItemClick(item));
+            if (longClickListener != null) {
+                itemView.setOnClickListener(v -> listener.onItemClick(item));
+            } else {
+                itemView.setOnClickListener(null); // Clear if no listener
+            }
+
+            if (longClickListener != null) {
+                itemView.setOnLongClickListener(v -> longClickListener.onItemLongClick(item));
+            } else {
+                itemView.setOnLongClickListener(null); // Clear if no listener
+            }
+
         }
     }
 }

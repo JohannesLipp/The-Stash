@@ -28,19 +28,13 @@ public class OpenFoodFacts {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public interface ProductDataCallback {
-        void onSuccess(OpenFoodFactsResultDTO results);
+        void onSuccess(FoodItem foodItem, OpenFoodFactsResultDTO results);
 
         void onError(String errorMessage);
     }
 
-    /**
-     * Fetches product data from the Open Food Facts staging API for a given barcode.
-     *
-     * @param barcode  The barcode of the product to fetch.
-     * @param callback The callback to handle the success or error response.
-     */
-    public void fetchProductData(int id, String barcode, ProductDataCallback callback) {
-        if (barcode == null || barcode.trim().isEmpty()) {
+    public void fetchProductData(FoodItem foodItem, ProductDataCallback callback) {
+        if (foodItem.getBarcode() == null || foodItem.getBarcode().trim().isEmpty()) {
             callback.onError("Barcode cannot be empty.");
             return;
         }
@@ -50,7 +44,7 @@ public class OpenFoodFacts {
             String productJsonString;
 
             try {
-                URL url = new URL(STAGING_API_URL + barcode + ".json");
+                URL url = new URL(STAGING_API_URL + foodItem.getBarcode() + ".json");
                 Log.d(TAG, "Requesting URL: " + url);
 
                 urlConnection = (HttpURLConnection) url.openConnection();
@@ -85,7 +79,7 @@ public class OpenFoodFacts {
                 Log.d(TAG, "Raw JSON Response: " + productJsonString);
 
                 if (productJsonString != null && !productJsonString.isEmpty()) {
-                    parseProductJson(id, productJsonString, callback);
+                    parseProductJson(foodItem, productJsonString, callback);
                 } else {
                     callback.onError("Empty response from server.");
                 }
@@ -117,7 +111,7 @@ public class OpenFoodFacts {
         return buffer.toString();
     }
 
-    private void parseProductJson(int id, String jsonString, ProductDataCallback callback) throws JSONException {
+    private void parseProductJson(FoodItem foodItem, String jsonString, ProductDataCallback callback) throws JSONException {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             // Read the entire JSON string into a Jackson JsonNode
@@ -137,10 +131,9 @@ public class OpenFoodFacts {
 
                 // Deserialize the "product" node directly into your DTO
                 OpenFoodFactsResultDTO productDTO = objectMapper.treeToValue(productNode, OpenFoodFactsResultDTO.class);
-                productDTO.setId(id);
 
                 Log.i(TAG, "Successfully deserialized product: " + productDTO);
-                callback.onSuccess(productDTO);
+                callback.onSuccess(foodItem, productDTO);
 
             } else {
                 Log.w(TAG, "Product not found or status indicates error. Status verbose: " + statusVerbose);
