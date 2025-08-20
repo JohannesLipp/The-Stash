@@ -19,6 +19,7 @@ public class FoodItem {
     private final int expiryMonth;
     private final int expiryYear;
     private final int count;
+    private byte[] imageData;
 
     @Ignore
     public FoodItem(String barcode, int expiryDay, int expiryMonth, int expiryYear, int count) {
@@ -76,6 +77,10 @@ public class FoodItem {
         return count;
     }
 
+    public byte[] getImageData() {
+        return imageData;
+    }
+
     public void setId(int id) {
         this.id = id;
     }
@@ -92,4 +97,7 @@ public class FoodItem {
         this.imageUrl = imageUrl;
     }
 
+    public void setImageData(byte[] imageData) {
+        this.imageData = imageData;
+    }
 }

@@ -28,7 +28,7 @@ public class OpenFoodFacts {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public interface ProductDataCallback {
-        void onSuccess(FoodItem foodItem, OpenFoodFactsResultDTO results);
+        void onSuccess(OpenFoodFactsResultDTO results);
 
         void onError(String errorMessage);
     }
@@ -79,7 +79,7 @@ public class OpenFoodFacts {
                 Log.d(TAG, "Raw JSON Response: " + productJsonString);
 
                 if (productJsonString != null && !productJsonString.isEmpty()) {
-                    parseProductJson(foodItem, productJsonString, callback);
+                    parseProductJson(productJsonString, callback);
                 } else {
                     callback.onError("Empty response from server.");
                 }
@@ -111,7 +111,7 @@ public class OpenFoodFacts {
         return buffer.toString();
     }
 
-    private void parseProductJson(FoodItem foodItem, String jsonString, ProductDataCallback callback) throws JSONException {
+    private void parseProductJson(String jsonString, ProductDataCallback callback) throws JSONException {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             // Read the entire JSON string into a Jackson JsonNode
@@ -133,7 +133,7 @@ public class OpenFoodFacts {
                 OpenFoodFactsResultDTO productDTO = objectMapper.treeToValue(productNode, OpenFoodFactsResultDTO.class);
 
                 Log.i(TAG, "Successfully deserialized product: " + productDTO);
-                callback.onSuccess(foodItem, productDTO);
+                callback.onSuccess(productDTO);
 
             } else {
                 Log.w(TAG, "Product not found or status indicates error. Status verbose: " + statusVerbose);
@@ -142,13 +142,6 @@ public class OpenFoodFacts {
         } catch (JsonProcessingException e) {
             Log.e(TAG, "Jackson JSON processing error", e);
             callback.onError("JSON parsing error: " + e.getMessage());
-        }
-    }
-
-    // Call this method when the object is no longer needed, e.g., in onDestroy of an Activity/ViewModel
-    public void shutdown() {
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
         }
     }
 }
