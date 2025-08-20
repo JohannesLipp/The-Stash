@@ -39,7 +39,7 @@ public class OpenFoodFacts {
      * @param barcode  The barcode of the product to fetch.
      * @param callback The callback to handle the success or error response.
      */
-    public void fetchProductData(String barcode, ProductDataCallback callback) {
+    public void fetchProductData(int id, String barcode, ProductDataCallback callback) {
         if (barcode == null || barcode.trim().isEmpty()) {
             callback.onError("Barcode cannot be empty.");
             return;
@@ -85,7 +85,7 @@ public class OpenFoodFacts {
                 Log.d(TAG, "Raw JSON Response: " + productJsonString);
 
                 if (productJsonString != null && !productJsonString.isEmpty()) {
-                    parseProductJson(productJsonString, callback);
+                    parseProductJson(id, productJsonString, callback);
                 } else {
                     callback.onError("Empty response from server.");
                 }
@@ -117,7 +117,7 @@ public class OpenFoodFacts {
         return buffer.toString();
     }
 
-    private void parseProductJson(String jsonString, ProductDataCallback callback) throws JSONException { // Can remove JSONException if not using org.json
+    private void parseProductJson(int id, String jsonString, ProductDataCallback callback) throws JSONException {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             // Read the entire JSON string into a Jackson JsonNode
@@ -137,8 +137,9 @@ public class OpenFoodFacts {
 
                 // Deserialize the "product" node directly into your DTO
                 OpenFoodFactsResultDTO productDTO = objectMapper.treeToValue(productNode, OpenFoodFactsResultDTO.class);
+                productDTO.setId(id);
 
-                Log.i(TAG, "Successfully deserialized product: " + productDTO.toString());
+                Log.i(TAG, "Successfully deserialized product: " + productDTO);
                 callback.onSuccess(productDTO);
 
             } else {

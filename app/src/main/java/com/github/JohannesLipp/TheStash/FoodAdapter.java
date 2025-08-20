@@ -49,19 +49,23 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
     }
 
     static class FoodViewHolder extends RecyclerView.ViewHolder {
-        TextView txtBarcode, txtExpiry, txtQuantity;
+        TextView txtName, txtBrand, txtBarcode, txtExpiry, txtCount;
 
         public FoodViewHolder(@NonNull View itemView) {
             super(itemView);
+            txtName = itemView.findViewById(R.id.txtName);
+            txtBrand = itemView.findViewById(R.id.txtBrand);
             txtBarcode = itemView.findViewById(R.id.txtBarcode);
             txtExpiry = itemView.findViewById(R.id.txtExpiry);
-            txtQuantity = itemView.findViewById(R.id.txtQuantity);
+            txtCount = itemView.findViewById(R.id.txtCount);
         }
 
         public void bind(FoodItem item, OnItemClickListener listener) {
-            txtBarcode.setText("Barcode: " + item.getBarcode());
-            txtExpiry.setText("Expires: " + item.getExpiryMonth() + "/" + item.getExpiryYear());
-            txtQuantity.setText("Count: " + item.getQuantity());
+            txtName.setText("Name:" +item.getName());
+            txtBrand.setText("Brand:" +item.getBrands());
+            txtBarcode.setText("Barcode:" +item.getBarcode());
+            txtExpiry.setText("Expiry:" +item.getExpiryFormatted());
+            txtCount.setText("Count:" + item.getCount());
 
             itemView.setOnClickListener(v -> listener.onItemClick(item));
         }

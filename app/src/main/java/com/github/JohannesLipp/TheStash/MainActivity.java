@@ -17,6 +17,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
 
     private FoodAdapter adapter;
     private AppDatabase db;
@@ -38,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         //adapter = new FoodAdapter(this::showDeleteDialog);
-        adapter = new FoodAdapter(this::downloadFoodData);
+        adapter = new FoodAdapter(this::showDeleteDialog);
         recyclerView.setAdapter(adapter);
 
         loadItems();
@@ -65,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
      * Loads all food items from the database and updates the RecyclerView.
      */
     private void loadItems() {
+        // This should run on a background thread in production
         List<FoodItem> items = db.foodItemDao().getAllItemsSorted();
         adapter.setItems(items);
     }
@@ -80,6 +82,8 @@ public class MainActivity extends AppCompatActivity {
             db.foodItemDao().insert(newItem);
             loadItems();
             Toast.makeText(MainActivity.this, "Item saved successfully", Toast.LENGTH_SHORT).show();
+
+            downloadFoodData(newItem);
         });
         dialog.show();
     }
@@ -97,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            int currentQuantity = item.getQuantity();
+            int currentQuantity = item.getCount();
             String itemDescription = item.getBarcode(); // Or another descriptive field
 
             if (quantityToRemove >= currentQuantity) {
@@ -113,23 +117,48 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private class ProductDataCallback implements OpenFoodFacts.ProductDataCallback {
+    private class ProductDataCallbackHandler implements OpenFoodFacts.ProductDataCallback {
 
         @Override
         public void onSuccess(OpenFoodFactsResultDTO product) {
             Log.i("MainActivity", "Download successful: " + product);
-            // Toast.makeText(MainActivity.this, "Download successful. Product name: " + productName + ",", Toast.LENGTH_SHORT).show();
+
+            // Update database entry (product_name_de, or product_name as fallback; brands, image_url), and update the recyclerview if necessary
+            FoodItem existingItem = db.foodItemDao().getItemById(product.getId());
+
+            if (existingItem != null) {
+                existingItem.setName(product.getProductName());
+                existingItem.setBrands(product.getBrands());
+                existingItem.setImageUrl(product.getImageUrl());
+
+                db.foodItemDao().update(existingItem); // Save the updated item to the database
+                Log.d(TAG, "Updated item in DB: " + existingItem);
+
+                // Refresh the UI by reloading items from the database
+                loadItems(); // This will update the RecyclerView
+
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Details updated for: " + existingItem.getName(), Toast.LENGTH_SHORT).show();
+                });
+            } else {
+                Log.w(TAG, "Item with ID " + product.getId() + " not found in DB for update. This shouldn't happen if download was triggered for an existing item.");
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Could not update item details (not found).", Toast.LENGTH_SHORT).show();
+                });
+            }
         }
 
         @Override
         public void onError(String errorMessage) {
             Log.e("MainActivity", "Download failed. Error: " + errorMessage);
-            //Toast.makeText(MainActivity.this, "Download failed. Error: " + errorMessage, Toast.LENGTH_SHORT).show();
+            runOnUiThread(() -> {
+                Toast.makeText(MainActivity.this, "Failed to get details: " + errorMessage.substring(0, Math.min(errorMessage.length(), 50)), Toast.LENGTH_LONG).show();
+            });
         }
     }
 
     private void downloadFoodData(FoodItem item) {
         OpenFoodFacts openFoodFacts = new OpenFoodFacts();
-        openFoodFacts.fetchProductData(item.getBarcode(), new ProductDataCallback());
+        openFoodFacts.fetchProductData(item.getId(), item.getBarcode(), new ProductDataCallbackHandler());
     }
 }
