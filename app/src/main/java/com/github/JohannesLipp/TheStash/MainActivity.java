@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -44,19 +45,19 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new FoodAdapter(this::showDeleteDialog, this::downloadFoodData);
+        adapter = new FoodAdapter(this::showDeleteItemDialog, this::downloadFoodData);
         recyclerView.setAdapter(adapter);
 
-        loadItems();
+        reloadAllItems();
 
         barcodeLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         String scannedBarcode = result.getData().getStringExtra("barcode");
-                        openAddDialog(scannedBarcode);
+                        showAddItemDialog(scannedBarcode);
                     } else {
-                        openAddDialog(null);
+                        showAddItemDialog(null);
                     }
                 }
         );
@@ -67,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void loadItems() {
+    private void reloadAllItems() {
         new Thread(() -> {
             final List<FoodItem> items = db.foodItemDao().getAllItemsSorted();
             Log.d(TAG, "Loaded items: " + items);
@@ -81,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    private void openAddDialog(String scannedBarcode) {
+    private void showAddItemDialog(@Nullable String scannedBarcode) {
         AddItemDialog dialog = new AddItemDialog(
                 this,
                 scannedBarcode,
@@ -89,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                         new Thread(() -> { // Perform DB operation on background thread
                             FoodItem newItem = new FoodItem(barcode, day, month, year, quantity);
                             db.foodItemDao().insert(newItem);
-                            loadItems();
+                            reloadAllItems();
                             runOnUiThread(() -> Toast.makeText(MainActivity.this, "Item saved successfully", Toast.LENGTH_SHORT).show());
 
                             downloadFoodData(newItem);
@@ -97,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void showDeleteDialog(FoodItem item) {
+    private void showDeleteItemDialog(FoodItem item) {
         DeleteItemDialog dialog = new DeleteItemDialog(this, quantityToRemove -> {
             if (quantityToRemove <= 0) { // Safety check or specific handling if needed
                 Toast.makeText(MainActivity.this, "Please enter a valid quantity to remove.", Toast.LENGTH_SHORT).show();
@@ -119,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "Quantity for '" + itemDescription + "' updated", Toast.LENGTH_SHORT).show());
                 }).start();
             }
-            loadItems();
+            reloadAllItems();
         });
         dialog.show();
     }
@@ -133,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onSuccess(OpenFoodFactsResultDTO productData) {
-            Log.i("MainActivity", "Download successful: " + productData);
+            Log.d("MainActivity", "Download successful, updating DB & UI: " + productData);
 
             // Update database entry (product_name_de, or product_name as fallback; brands, image_url), and update the recyclerview if necessary
             new Thread(() -> {
@@ -143,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
                 db.foodItemDao().update(itemToUpdate); // Save the updated item to the database
                 Log.d(TAG, "Updated item in DB: " + itemToUpdate);
 
-                loadItems(); // Refresh RecyclerView with text updates
+                reloadAllItems(); // Refresh RecyclerView with text updates
 
                 if (productData.getImageUrl() != null && !productData.getImageUrl().isEmpty()) {
                     downloadAndStoreImage(itemToUpdate, productData.getImageUrl());
@@ -186,7 +187,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.i(TAG, "Image downloaded and stored in DB for: " + itemToUpdateWithImage.getName());
 
                         // Refresh UI to show the image (if your adapter is set up for it)
-                        loadItems(); // This will re-bind the view, adapter needs to handle byte[] for image
+                        reloadAllItems(); // This will re-bind the view, adapter needs to handle byte[] for image
                         runOnUiThread(() -> Toast.makeText(MainActivity.this, "Image updated for " + itemToUpdateWithImage.getName(), Toast.LENGTH_SHORT).show());
                     } else {
                         Log.w(TAG, "Item not found for image update.");
@@ -202,6 +203,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean downloadFoodData(FoodItem foodItem) {
+        Log.d(TAG, "Starting download for item ID: " + foodItem.getId() + ", Barcode: " + foodItem.getBarcode());
         OpenFoodFacts openFoodFacts = new OpenFoodFacts();
         openFoodFacts.fetchProductData(foodItem, new ProductDataCallbackHandler(foodItem));
         return true;

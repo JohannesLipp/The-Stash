@@ -20,7 +20,6 @@ import java.util.concurrent.Executors;
 public class OpenFoodFacts {
 
     private static final String TAG = "OpenFoodFacts";
-    // Staging API documentation: https://openfoodfacts.github.io/openfoodfacts-server/api/v3/api-docs-staging/
     // Staging API base URL for products:
     private static final String STAGING_API_URL = "https://staging.openfoodfacts.org/api/v2/product/";
     // For V3, it would be "https://staging.openfoodfacts.org/api/v3/product/" - adjust if needed based on exact endpoint

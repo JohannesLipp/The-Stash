@@ -59,7 +59,7 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
         return items.size();
     }
 
-    static class FoodViewHolder extends RecyclerView.ViewHolder {
+    public static class FoodViewHolder extends RecyclerView.ViewHolder {
         TextView txtName, txtBrand, txtBarcode, txtExpiry, txtCount;
 
         ImageView imageViewProduct;
