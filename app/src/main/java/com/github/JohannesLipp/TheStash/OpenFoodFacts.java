@@ -15,7 +15,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class OpenFoodFacts {
 
@@ -24,20 +23,19 @@ public class OpenFoodFacts {
     private static final String STAGING_API_URL = "https://staging.openfoodfacts.org/api/v2/product/";
     // For V3, it would be "https://staging.openfoodfacts.org/api/v3/product/" - adjust if needed based on exact endpoint
 
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
-
     public interface ProductDataCallback {
         void onSuccess(OpenFoodFactsResultDTO results);
 
         void onError(String errorMessage);
     }
 
-    public void fetchProductData(FoodItem foodItem, ProductDataCallback callback) {
+    public static void fetchProductData(FoodItem foodItem, ExecutorService executorService, ProductDataCallback callback) {
         if (foodItem.getBarcode() == null || foodItem.getBarcode().trim().isEmpty()) {
             callback.onError("Barcode cannot be empty.");
             return;
         }
 
+        Log.d(TAG, "Fetching product data for barcode: " + foodItem.getBarcode());
         executorService.execute(() -> {
             HttpURLConnection urlConnection = null;
             String productJsonString;
@@ -51,6 +49,7 @@ public class OpenFoodFacts {
                 urlConnection.connect();
 
                 // Check server response
+                Log.d(TAG, "Response code: " + urlConnection.getResponseCode());
                 int responseCode = urlConnection.getResponseCode();
                 if (responseCode != HttpURLConnection.HTTP_OK) {
                     Log.e(TAG, "Server returned HTTP error code: " + responseCode + " for URL: " + url);
@@ -68,8 +67,10 @@ public class OpenFoodFacts {
                     return;
                 }
 
+                Log.d(TAG, "Successfully connected to server.");
                 InputStream inputStream = urlConnection.getInputStream();
                 if (inputStream == null) {
+                    Log.e(TAG, "No data received from server.");
                     callback.onError("No data received from server.");
                     return;
                 }
@@ -78,8 +79,10 @@ public class OpenFoodFacts {
                 Log.d(TAG, "Raw JSON Response: " + productJsonString);
 
                 if (productJsonString != null && !productJsonString.isEmpty()) {
+                    Log.d(TAG, "Parsing JSON response...");
                     parseProductJson(productJsonString, callback);
                 } else {
+                    Log.e(TAG, "Empty response from server.");
                     callback.onError("Empty response from server.");
                 }
 
@@ -97,7 +100,7 @@ public class OpenFoodFacts {
         });
     }
 
-    private String readStream(InputStream inputStream) throws IOException {
+    private static String readStream(InputStream inputStream) throws IOException {
         StringBuilder buffer = new StringBuilder();
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         String line;
@@ -110,15 +113,17 @@ public class OpenFoodFacts {
         return buffer.toString();
     }
 
-    private void parseProductJson(String jsonString, ProductDataCallback callback) throws JSONException {
+    private static void parseProductJson(String jsonString, ProductDataCallback callback) throws JSONException {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             // Read the entire JSON string into a Jackson JsonNode
             JsonNode rootNode = objectMapper.readTree(jsonString);
+            Log.d(TAG, "JSON root node: " + rootNode);
 
             // Check status (using Jackson's navigation)
-            int status = rootNode.path("status").asInt(0); // asInt(0) provides default if not found
+            int status = rootNode.path("status").asInt(0);
             String statusVerbose = rootNode.path("status_verbose").asText("unknown status");
+            Log.d(TAG, "Status: " + status + ", Status verbose: " + statusVerbose);
 
             if (status == 1) {
                 JsonNode productNode = rootNode.path("product"); // Get the "product" node
@@ -128,12 +133,11 @@ public class OpenFoodFacts {
                     return;
                 }
 
-                // Deserialize the "product" node directly into your DTO
+                Log.d(TAG, "Deserializing product node: " + productNode);
                 OpenFoodFactsResultDTO productDTO = objectMapper.treeToValue(productNode, OpenFoodFactsResultDTO.class);
+                Log.d(TAG, "Successfully deserialized product: " + productDTO);
 
-                Log.i(TAG, "Successfully deserialized product: " + productDTO);
                 callback.onSuccess(productDTO);
-
             } else {
                 Log.w(TAG, "Product not found or status indicates error. Status verbose: " + statusVerbose);
                 callback.onError("Product not found: " + statusVerbose);

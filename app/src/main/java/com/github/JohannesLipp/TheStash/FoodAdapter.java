@@ -25,7 +25,7 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
         boolean onItemLongClick(FoodItem item);
     }
 
-    private final List<FoodItem> items = new ArrayList<>();
+    private List<FoodItem> items = new ArrayList<>();
     private final OnItemClickListener listener;
     private final OnItemLongClickListener longClickListener;
 
@@ -35,8 +35,7 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
     }
 
     public void setItems(List<FoodItem> items) {
-        this.items.clear();
-        this.items.addAll(items);
+        this.items = items;
         notifyDataSetChanged(); // Consider using DiffUtil for better performance
     }
 
@@ -85,6 +84,8 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
             if (item.getImageData() != null) {
                 Log.d(TAG, "Image data available");
                 imageViewProduct.setImageBitmap(BitmapFactory.decodeByteArray(item.getImageData(), 0, item.getImageData().length));
+                imageViewProduct.setVisibility(View.VISIBLE);
+                Log.d(TAG, "Image set for item: " + item.getName() + ", Image data length: " + item.getImageData().length + " bytes");
             } else {
                 Log.d(TAG, "No image data available");
                 imageViewProduct.setVisibility(View.GONE);

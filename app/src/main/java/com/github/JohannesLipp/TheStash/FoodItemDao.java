@@ -13,13 +13,13 @@ import java.util.List;
 public interface FoodItemDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(FoodItem item);
+    long insert(FoodItem item);
 
     @Query("SELECT * FROM food_items ORDER BY expiryYear ASC, expiryMonth ASC")
     List<FoodItem> getAllItemsSorted();
 
     @Query("UPDATE food_items SET count = count - :reduceBy WHERE id = :id AND count >= :reduceBy")
-    void reduceQuantity(int id, int reduceBy);
+    void reduceQuantity(long id, int reduceBy);
 
     @Update
     void update(FoodItem foodItem);

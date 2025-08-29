@@ -1,5 +1,6 @@
 package com.github.JohannesLipp.TheStash;
 
+import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
@@ -9,7 +10,7 @@ import java.util.Locale;
 @Entity(tableName = "food_items")
 public class FoodItem {
     @PrimaryKey(autoGenerate = true)
-    private int id;
+    private long id;
 
     private String name;
     private String brands;
@@ -37,7 +38,7 @@ public class FoodItem {
         this.count = count;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
@@ -81,7 +82,7 @@ public class FoodItem {
         return imageData;
     }
 
-    public void setId(int id) {
+    public void setId(long id) {
         this.id = id;
     }
 
@@ -99,5 +100,22 @@ public class FoodItem {
 
     public void setImageData(byte[] imageData) {
         this.imageData = imageData;
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return "FoodItem{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", brands='" + brands + '\'' +
+                ", imageUrl='" + imageUrl + '\'' +
+                ", barcode='" + barcode + '\'' +
+                ", expiryDay=" + expiryDay +
+                ", expiryMonth=" + expiryMonth +
+                ", expiryYear=" + expiryYear +
+                ", count=" + count +
+                ", imageData(size)=" + (imageData == null ? "0" : imageData.length) + "(B)" +
+                '}';
     }
 }
