@@ -11,6 +11,8 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 
+import androidx.annotation.Nullable;
+
 import java.util.Calendar;
 import java.util.Locale;
 
@@ -23,7 +25,7 @@ public class AddItemDialog extends Dialog {
     private final String scannedBarcode;
     private final DialogListener listener;
 
-    public AddItemDialog(Context context, String scannedBarcode, DialogListener listener) {
+    public AddItemDialog(Context context, @Nullable String scannedBarcode, DialogListener listener) {
         super(context);
         this.scannedBarcode = scannedBarcode;
         this.listener = listener;

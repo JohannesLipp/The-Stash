@@ -1,8 +1,11 @@
 package com.github.JohannesLipp.TheStash;
 
+import android.graphics.BitmapFactory;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -12,21 +15,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder> {
+    private static final String TAG = "FoodAdapter";
 
     public interface OnItemClickListener {
         void onItemClick(FoodItem item);
     }
 
+    public interface OnItemLongClickListener {
+        boolean onItemLongClick(FoodItem item);
+    }
+
     private List<FoodItem> items = new ArrayList<>();
     private final OnItemClickListener listener;
+    private final OnItemLongClickListener longClickListener;
 
-    public FoodAdapter(OnItemClickListener listener) {
+    public FoodAdapter(OnItemClickListener listener, OnItemLongClickListener longClickListener) {
         this.listener = listener;
+        this.longClickListener = longClickListener;
     }
 
     public void setItems(List<FoodItem> items) {
         this.items = items;
-        notifyDataSetChanged();
+        notifyDataSetChanged(); // Consider using DiffUtil for better performance
     }
 
     @NonNull
@@ -40,7 +50,7 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
     @Override
     public void onBindViewHolder(@NonNull FoodViewHolder holder, int position) {
         FoodItem item = items.get(position);
-        holder.bind(item, listener);
+        holder.bind(item, listener, longClickListener);
     }
 
     @Override
@@ -48,22 +58,51 @@ public class FoodAdapter extends RecyclerView.Adapter<FoodAdapter.FoodViewHolder
         return items.size();
     }
 
-    static class FoodViewHolder extends RecyclerView.ViewHolder {
-        TextView txtBarcode, txtExpiry, txtQuantity;
+    public static class FoodViewHolder extends RecyclerView.ViewHolder {
+        TextView txtName, txtBrand, txtBarcode, txtExpiry, txtCount;
+
+        ImageView imageViewProduct;
 
         public FoodViewHolder(@NonNull View itemView) {
             super(itemView);
+            txtName = itemView.findViewById(R.id.txtName);
+            txtBrand = itemView.findViewById(R.id.txtBrand);
             txtBarcode = itemView.findViewById(R.id.txtBarcode);
             txtExpiry = itemView.findViewById(R.id.txtExpiry);
-            txtQuantity = itemView.findViewById(R.id.txtQuantity);
+            txtCount = itemView.findViewById(R.id.txtCount);
+
+            imageViewProduct = itemView.findViewById(R.id.imgProduct);
         }
 
-        public void bind(FoodItem item, OnItemClickListener listener) {
-            txtBarcode.setText("Barcode: " + item.getBarcode());
-            txtExpiry.setText("Expires: " + item.getExpiryMonth() + "/" + item.getExpiryYear());
-            txtQuantity.setText("Count: " + item.getQuantity());
+        public void bind(final FoodItem item, final OnItemClickListener listener, final OnItemLongClickListener longClickListener) {
+            txtName.setText("Name: " +item.getName());
+            txtBrand.setText("Brand: " +item.getBrands());
+            txtBarcode.setText("Barcode: " +item.getBarcode());
+            txtExpiry.setText("Expiry: " +item.getExpiryFormatted());
+            txtCount.setText("Count: " + item.getCount());
 
-            itemView.setOnClickListener(v -> listener.onItemClick(item));
+            if (item.getImageData() != null) {
+                Log.d(TAG, "Image data available");
+                imageViewProduct.setImageBitmap(BitmapFactory.decodeByteArray(item.getImageData(), 0, item.getImageData().length));
+                imageViewProduct.setVisibility(View.VISIBLE);
+                Log.d(TAG, "Image set for item: " + item.getName() + ", Image data length: " + item.getImageData().length + " bytes");
+            } else {
+                Log.d(TAG, "No image data available");
+                imageViewProduct.setVisibility(View.GONE);
+            }
+
+            if (longClickListener != null) {
+                itemView.setOnClickListener(v -> listener.onItemClick(item));
+            } else {
+                itemView.setOnClickListener(null); // Clear if no listener
+            }
+
+            if (longClickListener != null) {
+                itemView.setOnLongClickListener(v -> longClickListener.onItemLongClick(item));
+            } else {
+                itemView.setOnLongClickListener(null); // Clear if no listener
+            }
+
         }
     }
 }

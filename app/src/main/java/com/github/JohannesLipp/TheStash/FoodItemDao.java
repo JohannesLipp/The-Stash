@@ -5,6 +5,7 @@ import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Update;
 
 import java.util.List;
 
@@ -12,13 +13,16 @@ import java.util.List;
 public interface FoodItemDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(FoodItem item);
+    long insert(FoodItem item);
 
     @Query("SELECT * FROM food_items ORDER BY expiryYear ASC, expiryMonth ASC")
     List<FoodItem> getAllItemsSorted();
 
-    @Query("UPDATE food_items SET quantity = quantity - :reduceBy WHERE id = :id AND quantity >= :reduceBy")
-    void reduceQuantity(int id, int reduceBy);
+    @Query("UPDATE food_items SET count = count - :reduceBy WHERE id = :id AND count >= :reduceBy")
+    void reduceQuantity(long id, int reduceBy);
+
+    @Update
+    void update(FoodItem foodItem);
 
     @Delete
     void delete(FoodItem item);

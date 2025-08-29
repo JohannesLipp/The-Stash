@@ -2,6 +2,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.github.JohannesLipp.TheStash.MainActivity">
+
+    <item
+        android:id="@+id/action_refresh_pictures"
+        android:title="Refresh Pictures" />
+
+    <item
+        android:id="@+id/action_refresh_data"
+        android:title="Refresh Data" />
+
     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
