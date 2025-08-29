@@ -51,7 +51,7 @@ public class AddItemDialog extends Dialog {
             final Calendar calendar = Calendar.getInstance();
 
             DatePickerDialog datePickerDialog = new DatePickerDialog(getContext(),
-                    (view, year, month, day) -> edtExpires.setText(String.format(Locale.GERMANY, "%02d.%02d.%04d", day, month + 1, year)),
+                    (view, year, month, day) -> edtExpires.setText(String.format(Locale.GERMANY, Constants.DATE_FORMAT, day, month + 1, year)),
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
                     calendar.get(Calendar.DAY_OF_MONTH));

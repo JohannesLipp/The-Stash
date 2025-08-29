@@ -1,7 +1,13 @@
 package com.github.JohannesLipp.TheStash;
 
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -17,9 +23,21 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.room.Room;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -38,9 +56,7 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
 
-        database = Room.databaseBuilder(getApplicationContext(),
-                        AppDatabase.class, "food_database")
-                .build();
+        openDatabase();
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new FoodAdapter(
@@ -84,15 +100,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int itemId = item.getItemId();
-        if (itemId == R.id.action_refresh_pictures) {
+        if (itemId == R.id.action_refresh_data_and_pictures) {
             // Handle refresh pictures action
-            Toast.makeText(this, "Refresh Pictures clicked", Toast.LENGTH_SHORT).show();
-            // TODO: Implement refresh pictures logic
+            Toast.makeText(this, "Refresh Data and Pictures clicked", Toast.LENGTH_SHORT).show();
+            // TODO: Implement refresh data and pictures logic
             return true;
-        } else if (itemId == R.id.action_refresh_data) {
-            // Handle refresh data action
-            Toast.makeText(this, "Refresh Data clicked", Toast.LENGTH_SHORT).show();
-            // TODO: Implement refresh data logic
+        } else if (itemId == R.id.action_export_database) {
+            exportDatabaseAsJson();
             return true;
         } else if (itemId == R.id.action_settings) {
             Toast.makeText(this, "Settings clicked", Toast.LENGTH_SHORT).show();
@@ -100,6 +114,88 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void exportDatabaseAsJson() {
+        Toast.makeText(this, "Exporting database as JSON...", Toast.LENGTH_SHORT).show();
+
+        new Thread(() -> {
+            List<FoodItem> foodItems = database.foodItemDao().getAllItemsSorted();
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+
+            try {
+                String jsonString = objectMapper.writeValueAsString(foodItems);
+                Log.d(TAG, "Serialized JSON for export: " + jsonString.substring(0, Math.min(jsonString.length(), 500)) + "...");
+
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                String currentDate = dateFormat.format(new Date());
+                String exportJsonFileName = currentDate + " The Stash Database Export.json";
+
+                writeJsonToDownloads(MainActivity.this, jsonString, exportJsonFileName);
+
+                Log.i(TAG, "Database exported successfully as JSON to Downloads directory: " + exportJsonFileName);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Database exported as JSON to Downloads", Toast.LENGTH_LONG).show());
+
+            } catch (IOException e) { // Catches JsonProcessingException too
+                Log.e(TAG, "Error exporting database as JSON", e);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error exporting JSON: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    /**
+     * Writes a JSON string to a file in the public "Downloads" directory using MediaStore.
+     *
+     * @param context     The context.
+     * @param jsonString  The JSON string to write.
+     * @param displayName The desired display name for the file in Downloads.
+     * @throws IOException If an error occurs during writing.
+     */
+    private void writeJsonToDownloads(Context context, String jsonString, String displayName) throws IOException {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName);
+        values.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
+
+        Uri collectionUri;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+            collectionUri = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        } else {
+            // For older versions (pre-Q), direct file access.
+            // This requires WRITE_EXTERNAL_STORAGE permission.
+            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            if (!downloadsDir.exists()) {
+                if (!downloadsDir.mkdirs()) {
+                    throw new IOException("Failed to create Downloads directory (pre-Q).");
+                }
+            }
+            File destFile = new File(downloadsDir, displayName);
+            try (FileOutputStream fos = new FileOutputStream(destFile);
+                 OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+                writer.write(jsonString);
+            }
+            Log.d(TAG, "JSON file written to: " + destFile.getAbsolutePath() + " (pre-Q method)");
+            return; // Exit if pre-Q handled
+        }
+
+        Uri itemUri = context.getContentResolver().insert(collectionUri, values);
+        if (itemUri == null) {
+            throw new IOException("Failed to create new MediaStore record for " + displayName);
+        }
+
+        try (OutputStream out = context.getContentResolver().openOutputStream(itemUri);
+             OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+            if (out == null) {
+                throw new IOException("Failed to open output stream for " + itemUri);
+            }
+            writer.write(jsonString);
+            Log.d(TAG, "JSON file written to MediaStore URI: " + itemUri);
+        } catch (Exception e) {
+            // If something goes wrong, try to delete the incomplete MediaStore entry
+            Log.e(TAG, "Error writing JSON to MediaStore", e);
+            context.getContentResolver().delete(itemUri, null, null);
+        }
     }
 
     public void reloadAllItems() {
@@ -151,5 +247,9 @@ public class MainActivity extends AppCompatActivity {
         });
 
         dialog.show();
+    }
+
+    private void openDatabase() {
+        database = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, Constants.DATABASE_NAME).build();
     }
 }

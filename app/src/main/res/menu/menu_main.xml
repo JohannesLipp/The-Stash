@@ -4,12 +4,12 @@
     tools:context="com.github.JohannesLipp.TheStash.MainActivity">
 
     <item
-        android:id="@+id/action_refresh_pictures"
-        android:title="Refresh Pictures" />
+        android:id="@+id/action_refresh_data_and_pictures"
+        android:title="Refresh All Data and Pictures" />
 
     <item
-        android:id="@+id/action_refresh_data"
-        android:title="Refresh Data" />
+        android:id="@+id/action_export_database"
+        android:title="Export Database" />
 
     <item
         android:id="@+id/action_settings"

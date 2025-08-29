@@ -5,21 +5,36 @@ import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Locale;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Entity(tableName = "food_items")
 public class FoodItem {
     @PrimaryKey(autoGenerate = true)
+    @JsonProperty
     private long id;
 
+    @JsonProperty
     private String name;
+    @JsonProperty
     private String brands;
+    @JsonProperty
     private String imageUrl;
+    @JsonProperty
     private final String barcode;
+    @JsonIgnore
     private final int expiryDay;
+    @JsonIgnore
     private final int expiryMonth;
+    @JsonIgnore
     private final int expiryYear;
+    @JsonProperty
     private final int count;
+    @JsonIgnore
     private byte[] imageData;
 
     @Ignore
@@ -70,8 +85,9 @@ public class FoodItem {
         return expiryYear;
     }
 
+    @JsonProperty("expires")
     public String getExpiryFormatted() {
-        return String.format(Locale.GERMANY, "%02d.%02d.%04d", expiryDay, expiryMonth, expiryYear);
+        return String.format(Locale.GERMANY, Constants.DATE_FORMAT, expiryDay, expiryMonth, expiryYear);
     }
 
     public int getCount() {
@@ -111,9 +127,7 @@ public class FoodItem {
                 ", brands='" + brands + '\'' +
                 ", imageUrl='" + imageUrl + '\'' +
                 ", barcode='" + barcode + '\'' +
-                ", expiryDay=" + expiryDay +
-                ", expiryMonth=" + expiryMonth +
-                ", expiryYear=" + expiryYear +
+                ", expires=" + getExpiryFormatted() +
                 ", count=" + count +
                 ", imageData(size)=" + (imageData == null ? "0" : imageData.length) + "(B)" +
                 '}';
